@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>연말 행사 노래 경연 점수 집계</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .admin-section {
+            padding: 30px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .admin-title {
+            color: #333;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+
+        .song-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .song-input input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            min-width: 200px;
+        }
+
+        .song-input input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+            color: white;
+        }
+
+        .voting-section {
+            padding: 30px;
+            display: none;
+        }
+
+        .current-song {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-radius: 15px;
+        }
+
+        .current-song h2 {
+            color: #333;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .current-song p {
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .voter-info {
+            margin-bottom: 20px;
+        }
+
+        .voter-info input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .score-buttons {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .score-btn {
+            padding: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            border: 3px solid #ddd;
+            background: white;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .score-btn:hover {
+            transform: scale(1.05);
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .score-btn.selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .results-section {
+            padding: 30px;
+            display: none;
+        }
+
+        .results-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .song-result {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+        }
+
+        .song-result h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .result-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .winner {
+            background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
+            color: white;
+            border-left-color: #ffd89b;
+        }
+
+        .winner .stat-value {
+            color: #ffd89b;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #c62828;
+        }
+
+        .success-message {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2e7d32;
+        }
+
+        @media (max-width: 768px) {
+            .score-buttons {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .song-input {
+                flex-direction: column;
+            }
+            
+            .control-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 연말 행사 노래 경연</h1>
+            <p>실시간 점수 집계 시스템</p>
+        </div>
+
+        <!-- 관리자 섹션 -->
+        <div class="admin-section" id="adminSection">
+            <h2 class="admin-title">📋 경연 곡 등록</h2>
+            <div class="song-input">
+                <input type="text" id="songTitle" placeholder="곡명 입력 (예: 아무노래)" />
+                <input type="text" id="artistName" placeholder="가수명 입력 (예: 지코)" />
+                <input type="text" id="performerName" placeholder="참가자명 입력 (예: 홍길동)" />
+                <button class="btn btn-primary" onclick="addSong()">곡 추가</button>
+            </div>
+            
+            <div id="songList"></div>
+            
+            <div class="control-buttons">
+                <button class="btn btn-success" onclick="startVoting()" id="startBtn" disabled>투표 시작</button>
+                <button class="btn btn-primary" onclick="showResults()">결과 보기</button>
+            </div>
+        </div>
+
+        <!-- 투표 섹션 -->
+        <div class="voting-section" id="votingSection">
+            <div class="current-song" id="currentSong">
+                <h2 id="currentTitle">곡명</h2>
+                <p id="currentArtist">가수명</p>
+                <p id="currentPerformer">참가자명</p>
+            </div>
+
+            <div class="voter-info">
+                <input type="text" id="voterName" placeholder="투표자 이름을 입력하세요" />
+            </div>
+
+            <div class="score-buttons">
+                <button class="score-btn" onclick="selectScore(1)">1점</button>
+                <button class="score-btn" onclick="selectScore(2)">2점</button>
+                <button class="score-btn" onclick="selectScore(3)">3점</button>
+                <button class="score-btn" onclick="selectScore(4)">4점</button>
+                <button class="score-btn" onclick="selectScore(5)">5점</button>
+                <button class="score-btn" onclick="selectScore(6)">6점</button>
+                <button class="score-btn" onclick="selectScore(7)">7점</button>
+                <button class="score-btn" onclick="selectScore(8)">8점</button>
+                <button class="score-btn" onclick="selectScore(9)">9점</button>
+                <button class="score-btn" onclick="selectScore(10)">10점</button>
+            </div>
+
+            <div class="control-buttons">
+                <button class="btn btn-primary" onclick="submitVote()" id="submitVoteBtn" disabled>투표하기</button>
+                <button class="btn btn-success" onclick="nextSong()" id="nextSongBtn">다음 곡</button>
+                <button class="btn btn-danger" onclick="backToAdmin()">관리자 화면</button>
+            </div>
+
+            <div id="voteMessage"></div>
+        </div>
+
+        <!-- 결과 섹션 -->
+        <div class="results-section" id="resultsSection">
+            <h2 class="admin-title">🏆 최종 결과</h2>
+            <div class="results-grid" id="resultsGrid"></div>
+            
+            <div class="control-buttons">
+                <button class="btn btn-primary" onclick="backToAdmin()">새로운 경연 시작</button>
+                <button class="btn btn-success" onclick="exportResults()">결과 다운로드</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let songs = [];
+        let currentSongIndex = 0;
+        let selectedScore = 0;
+        let votes = {}; // 투표자별 투표 기록
+        let songVotes = {}; // 곡별 투표 결과
+
+        function addSong() {
+            const title = document.getElementById('songTitle').value.trim();
+            const artist = document.getElementById('artistName').value.trim();
+            const performer = document.getElementById('performerName').value.trim();
+
+            if (!title || !artist || !performer) {
+                showMessage('모든 정보를 입력해주세요!', 'error');
+                return;
+            }
+
+            const song = {
+                id: Date.now(),
+                title: title,
+                artist: artist,
+                performer: performer
+            };
+
+            songs.push(song);
+            songVotes[song.id] = [];
+            
+            updateSongList();
+            clearInputs();
+            
+            document.getElementById('startBtn').disabled = false;
+            showMessage('곡이 추가되었습니다!', 'success');
+        }
+
+        function updateSongList() {
+            const songList = document.getElementById('songList');
+            if (songs.length === 0) {
+                songList.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">등록된 곡이 없습니다.</p>';
+                return;
+            }
+
+            songList.innerHTML = songs.map((song, index) => `
+                <div class="song-result" style="margin-bottom: 10px;">
+                    <h3>${index + 1}. ${song.title}</h3>
+                    <p>가수: ${song.artist} | 참가자: ${song.performer}</p>
+                    <button class="btn btn-danger" onclick="removeSong(${song.id})" style="margin-top: 10px;">삭제</button>
+                </div>
+            `).join('');
+        }
+
+        function removeSong(songId) {
+            songs = songs.filter(song => song.id !== songId);
+            delete songVotes[songId];
+            updateSongList();
+            
+            if (songs.length === 0) {
+                document.getElementById('startBtn').disabled = true;
+            }
+            
+            showMessage('곡이 삭제되었습니다.', 'success');
+        }
+
+        function clearInputs() {
+            document.getElementById('songTitle').value = '';
+            document.getElementById('artistName').value = '';
+            document.getElementById('performerName').value = '';
+        }
+
+        function startVoting() {
+            if (songs.length === 0) {
+                showMessage('먼저 곡을 등록해주세요!', 'error');
+                return;
+            }
+
+            currentSongIndex = 0;
+            document.getElementById('adminSection').style.display = 'none';
+            document.getElementById('votingSection').style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+            
+            showCurrentSong();
+        }
+
+        function showCurrentSong() {
+            if (currentSongIndex >= songs.length) {
+                showResults();
+                return;
+            }
+
+            const song = songs[currentSongIndex];
+            document.getElementById('currentTitle').textContent = song.title;
+            document.getElementById('currentArtist').textContent = `가수: ${song.artist}`;
+            document.getElementById('currentPerformer').textContent = `참가자: ${song.performer}`;
+            
+            // 투표 초기화
+            selectedScore = 0;
+            document.getElementById('voterName').value = '';
+            clearScoreSelection();
+            document.getElementById('submitVoteBtn').disabled = true;
+            
+            // 다음 곡 버튼 표시 여부
+            document.getElementById('nextSongBtn').style.display = 
+                currentSongIndex < songs.length - 1 ? 'inline-block' : 'none';
+        }
+
+        function selectScore(score) {
+            selectedScore = score;
+            
+            // 모든 버튼 선택 해제
+            document.querySelectorAll('.score-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // 선택된 버튼 활성화
+            event.target.classList.add('selected');
+            
+            // 투표자 이름이 있으면 투표 버튼 활성화
+            checkVoteReady();
+        }
+
+        function checkVoteReady() {
+            const voterName = document.getElementById('voterName').value.trim();
+            const submitBtn = document.getElementById('submitVoteBtn');
+            
+            submitBtn.disabled = !(selectedScore > 0 && voterName);
+        }
+
+        // 투표자 이름 입력 시 실시간 체크
+        document.getElementById('voterName').addEventListener('input', checkVoteReady);
+
+        function submitVote() {
+            const voterName = document.getElementById('voterName').value.trim();
+            const songId = songs[currentSongIndex].id;
+
+            if (!voterName || selectedScore === 0) {
+                showMessage('투표자 이름과 점수를 선택해주세요!', 'error');
+                return;
+            }
+
+            // 중복 투표 방지
+            const voteKey = `${voterName}_${songId}`;
+            if (votes[voteKey]) {
+                showMessage('이미 이 곡에 투표하셨습니다!', 'error');
+                return;
+            }
+
+            // 투표 기록
+            votes[voteKey] = true;
+            songVotes[songId].push({
+                voter: voterName,
+                score: selectedScore,
+                timestamp: new Date().toLocaleTimeString()
+            });
+
+            showMessage(`${voterName}님의 투표가 완료되었습니다! (${selectedScore}점)`, 'success');
+            
+            // 폼 초기화
+            document.getElementById('voterName').value = '';
+            selectedScore = 0;
+            clearScoreSelection();
+            document.getElementById('submitVoteBtn').disabled = true;
+        }
+
+        function clearScoreSelection() {
+            document.querySelectorAll('.score-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+        }
+
+        function nextSong() {
+            currentSongIndex++;
+            showCurrentSong();
+        }
+
+        function showResults() {
+            document.getElementById('adminSection').style.display = 'none';
+            document.getElementById('votingSection').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'block';
+            
+            calculateAndDisplayResults();
+        }
+
+        function calculateAndDisplayResults() {
+            const results = songs.map(song => {
+                const votes = songVotes[song.id] || [];
+                const totalVotes = votes.length;
+                const totalScore = votes.reduce((sum, vote) => sum + vote.score, 0);
+                const averageScore = totalVotes > 0 ? (totalScore / totalVotes).toFixed(2) : 0;
+                
+                return {
+                    ...song,
+                    totalVotes,
+                    totalScore,
+                    averageScore: parseFloat(averageScore),
+                    votes
+                };
+            });
+
+            // 평균 점수로 정렬 (높은 순)
+            results.sort((a, b) => b.averageScore - a.averageScore);
+
+            const resultsGrid = document.getElementById('resultsGrid');
+            resultsGrid.innerHTML = results.map((result, index) => `
+                <div class="song-result ${index === 0 ? 'winner' : ''}">
+                    <h3>${index === 0 ? '🏆 ' : `${index + 1}위 `}${result.title}</h3>
+                    <p>가수: ${result.artist} | 참가자: ${result.performer}</p>
+                    
+                    <div class="result-stats">
+                        <div class="stat-box">
+                            <div class="stat-value">${result.averageScore}</div>
+                            <div class="stat-label">평균 점수</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${result.totalVotes}</div>
+                            <div class="stat-label">총 투표수</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${result.totalScore}</div>
+                            <div class="stat-label">총점</div>
+                        </div>
+                    </div>
+                    
+                    ${result.votes.length > 0 ? `
+                        <details style="margin-top: 15px;">
+                            <summary style="cursor: pointer; font-weight: bold;">투표 상세 보기</summary>
+                            <div style="margin-top: 10px; font-size: 0.9em;">
+                                ${result.votes.map(vote => 
+                                    `<p>${vote.voter}: ${vote.score}점 (${vote.timestamp})</p>`
+                                ).join('')}
+                            </div>
+                        </details>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function backToAdmin() {
+            document.getElementById('adminSection').style.display = 'block';
+            document.getElementById('votingSection').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'none';
+        }
+
+        function exportResults() {
+            const results = songs.map(song => {
+                const votes = songVotes[song.id] || [];
+                const totalVotes = votes.length;
+                const totalScore = votes.reduce((sum, vote) => sum + vote.score, 0);
+                const averageScore = totalVotes > 0 ? (totalScore / totalVotes).toFixed(2) : 0;
+                
+                return {
+                    곡명: song.title,
+                    가수: song.artist,
+                    참가자: song.performer,
+                    총투표수: totalVotes,
+                    총점: totalScore,
+                    평균점수: averageScore
+                };
+            });
+
+            results.sort((a, b) => b.평균점수 - a.평균점수);
+
+            let csvContent = "순위,곡명,가수,참가자,총투표수,총점,평균점수\n";
+            results.forEach((result, index) => {
+                csvContent += `${index + 1},"${result.곡명}","${result.가수}","${result.참가자}",${result.총투표수},${result.총점},${result.평균점수}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `노래경연_결과_${new Date().toLocaleDateString()}.csv`;
+            link.click();
+        }
+
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('voteMessage');
+            messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
+            messageDiv.textContent = message;
+            messageDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
