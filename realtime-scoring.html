@@ -642,6 +642,11 @@
                 document.getElementById('authDomain').value = config.authDomain;
                 document.getElementById('databaseURL').value = config.databaseURL;
                 document.getElementById('projectId').value = config.projectId;
+
+                // 자동으로 Firebase 연결 시도
+                setTimeout(() => {
+                    connectFirebase();
+                }, 500);
             }
 
             // 저장된 투표자 이름 불러오기
