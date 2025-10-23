@@ -1089,22 +1089,42 @@
                         const songId = songChild.key;
                         const song = songChild.val();
 
-                        let totalScore = 0;
-                        let voteCount = 0;
+                        let allScores = []; // 모든 점수를 배열로 저장
                         let correctVoters = []; // 정답자 목록
 
                         if (snapshot.exists() && snapshot.child(songId).exists()) {
                             const votes = snapshot.child(songId).child('votes').val();
                             if (votes) {
                                 Object.values(votes).forEach(vote => {
-                                    totalScore += vote.score;
-                                    voteCount++;
+                                    allScores.push(vote.score);
                                     // 정답자 수집
                                     if (vote.isCorrect) {
                                         correctVoters.push(vote.voter);
                                     }
                                 });
                             }
+                        }
+
+                        let totalScore = 0;
+                        let voteCount = allScores.length;
+                        let excludedCount = 0;
+                        let perfectScoreCount = 0; // 10점 개수
+
+                        // 점수 계산: 가장 낮은 3개 제외
+                        if (voteCount > 3) {
+                            // 점수를 오름차순으로 정렬
+                            const sortedScores = [...allScores].sort((a, b) => a - b);
+                            // 가장 낮은 3개 제외
+                            const validScores = sortedScores.slice(3);
+                            totalScore = validScores.reduce((sum, score) => sum + score, 0);
+                            voteCount = validScores.length;
+                            excludedCount = 3;
+                            // 10점 개수 계산 (제외된 점수 중에서도 계산)
+                            perfectScoreCount = allScores.filter(score => score === 10).length;
+                        } else {
+                            // 투표수가 3개 이하면 모두 포함
+                            totalScore = allScores.reduce((sum, score) => sum + score, 0);
+                            perfectScoreCount = allScores.filter(score => score === 10).length;
                         }
 
                         const averageScore = voteCount > 0 ? (totalScore / voteCount).toFixed(2) : 0;
@@ -1115,14 +1135,23 @@
                             artist: song.artist,
                             performer: song.performer,
                             totalScore: totalScore,
-                            voteCount: voteCount,
+                            voteCount: allScores.length, // 원래 투표 수
+                            validVoteCount: voteCount, // 실제 계산에 사용된 투표 수
+                            excludedCount: excludedCount, // 제외된 투표 수
                             averageScore: parseFloat(averageScore),
+                            perfectScoreCount: perfectScoreCount, // 10점 개수
                             correctVoters: correctVoters // 정답자 목록 추가
                         });
                     });
 
-                    // 평균 점수로 정렬
-                    results.sort((a, b) => b.averageScore - a.averageScore);
+                    // 평균 점수로 정렬 (동점 시 10점 개수로 비교)
+                    results.sort((a, b) => {
+                        if (b.averageScore === a.averageScore) {
+                            // 평균이 같으면 10점 개수가 많은 쪽이 우선
+                            return b.perfectScoreCount - a.perfectScoreCount;
+                        }
+                        return b.averageScore - a.averageScore;
+                    });
 
                     displayResults(results, 'adminResults');
                     displayResults(results, 'displayResults');
@@ -1151,13 +1180,22 @@
                         </div>
                         <div class="stat-box">
                             <div class="stat-value">${result.voteCount}</div>
-                            <div class="stat-label">투표 수</div>
+                            <div class="stat-label">총 투표 수</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${result.perfectScoreCount}</div>
+                            <div class="stat-label">만점(10점) 수</div>
                         </div>
                         <div class="stat-box">
                             <div class="stat-value">${result.correctVoters.length}</div>
                             <div class="stat-label">정답자 수</div>
                         </div>
                     </div>
+                    ${result.excludedCount > 0 ? `
+                        <div style="margin-top: 10px; padding: 8px; background: rgba(255,193,7,0.1); border-radius: 6px; font-size: 13px; color: #ffc107;">
+                            ℹ️ 최하위 ${result.excludedCount}개 점수 제외됨 (${result.validVoteCount}개 점수로 평균 계산)
+                        </div>
+                    ` : ''}
                     ${result.correctVoters.length > 0 ? `
                         <div style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px;">
                             <strong>✅ 정답자:</strong> ${result.correctVoters.join(', ')}
