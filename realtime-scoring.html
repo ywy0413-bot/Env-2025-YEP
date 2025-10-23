@@ -359,6 +359,52 @@
             font-weight: bold;
         }
 
+        .password-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .password-box {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .password-box h3 {
+            margin-bottom: 20px;
+            color: #333;
+            text-align: center;
+        }
+
+        .password-box input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .password-box .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .password-box .btn {
+            flex: 1;
+        }
+
         @media (max-width: 768px) {
             .song-input {
                 grid-template-columns: 1fr;
@@ -378,6 +424,19 @@
     <div class="connection-status" id="connectionStatus">
         <span class="online-indicator"></span>
         <span id="statusText">연결 중...</span>
+    </div>
+
+    <!-- 비밀번호 확인 모달 -->
+    <div class="password-modal" id="passwordModal">
+        <div class="password-box">
+            <h3 id="passwordModalTitle">🔒 관리자 인증</h3>
+            <input type="password" id="passwordInput" placeholder="비밀번호를 입력하세요" onkeypress="if(event.key==='Enter') checkPassword()">
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="checkPassword()">확인</button>
+                <button class="btn btn-danger" onclick="closePasswordModal()">취소</button>
+            </div>
+            <div id="passwordError" class="message"></div>
+        </div>
     </div>
 
     <div class="container">
@@ -517,6 +576,8 @@
         let songsRef = null;
         let votingStatusRef = null;
         let resultsRef = null;
+        let pendingMode = null; // 비밀번호 확인 대기 중인 모드
+        const ADMIN_PASSWORD = '1234'; // 기본 비밀번호 (나중에 변경 가능)
 
         // Firebase 연결
         function connectFirebase() {
@@ -610,20 +671,62 @@
 
         // 모드 선택
         function selectMode(mode) {
+            // 관리자 모드와 결과 화면 모드는 비밀번호 필요
+            if (mode === 'admin' || mode === 'display') {
+                pendingMode = mode;
+                document.getElementById('passwordModalTitle').textContent =
+                    mode === 'admin' ? '🔒 관리자 인증' : '🔒 결과 화면 인증';
+                document.getElementById('passwordModal').style.display = 'flex';
+                document.getElementById('passwordInput').value = '';
+                document.getElementById('passwordInput').focus();
+                return;
+            }
+
+            // 참여자 모드는 비밀번호 불필요
             currentMode = mode;
             document.getElementById('modeSelector').style.display = 'none';
 
-            if (mode === 'admin') {
-                document.getElementById('adminSection').style.display = 'block';
-                loadSongs();
-                watchResults();
-            } else if (mode === 'voter') {
+            if (mode === 'voter') {
                 document.getElementById('voterSection').style.display = 'block';
                 watchCurrentSong();
-            } else if (mode === 'display') {
-                document.getElementById('displaySection').style.display = 'block';
-                watchResults();
             }
+        }
+
+        // 비밀번호 확인
+        function checkPassword() {
+            const inputPassword = document.getElementById('passwordInput').value;
+
+            if (inputPassword === ADMIN_PASSWORD) {
+                closePasswordModal();
+                currentMode = pendingMode;
+                document.getElementById('modeSelector').style.display = 'none';
+
+                if (pendingMode === 'admin') {
+                    document.getElementById('adminSection').style.display = 'block';
+                    loadSongs();
+                    watchResults();
+                } else if (pendingMode === 'display') {
+                    document.getElementById('displaySection').style.display = 'block';
+                    watchResults();
+                }
+                pendingMode = null;
+            } else {
+                const errorDiv = document.getElementById('passwordError');
+                errorDiv.textContent = '비밀번호가 틀렸습니다.';
+                errorDiv.className = 'message error';
+                errorDiv.style.display = 'block';
+
+                setTimeout(() => {
+                    errorDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // 비밀번호 모달 닫기
+        function closePasswordModal() {
+            document.getElementById('passwordModal').style.display = 'none';
+            document.getElementById('passwordInput').value = '';
+            pendingMode = null;
         }
 
         function backToModeSelect() {
@@ -771,7 +874,6 @@
                             <div class="current-song-display">
                                 <h2>${song.title}</h2>
                                 <p>가수: ${song.artist}</p>
-                                <p>참가자: ${song.performer}</p>
                             </div>
                         `;
                     }
@@ -818,21 +920,41 @@
                 }
 
                 const songId = status.currentSongId;
-                const voteRef = resultsRef.child(songId).child('votes').push();
 
-                voteRef.set({
-                    voter: voterName,
-                    score: selectedScore,
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                }).then(() => {
-                    showMessage('voterMessage', `투표 완료! ${selectedScore}점을 주셨습니다.`, 'success');
-                    selectedScore = 0;
-                    document.querySelectorAll('.score-btn').forEach(btn => {
-                        btn.classList.remove('selected');
+                // 중복 투표 확인
+                resultsRef.child(songId).child('votes').once('value', (votesSnapshot) => {
+                    let alreadyVoted = false;
+
+                    if (votesSnapshot.exists()) {
+                        votesSnapshot.forEach((voteChild) => {
+                            const vote = voteChild.val();
+                            if (vote.voter === voterName) {
+                                alreadyVoted = true;
+                            }
+                        });
+                    }
+
+                    if (alreadyVoted) {
+                        showMessage('voterMessage', '이미 이 곡에 투표하셨습니다!', 'error');
+                        return;
+                    }
+
+                    // 투표 저장
+                    const voteRef = resultsRef.child(songId).child('votes').push();
+                    voteRef.set({
+                        voter: voterName,
+                        score: selectedScore,
+                        timestamp: firebase.database.ServerValue.TIMESTAMP
+                    }).then(() => {
+                        showMessage('voterMessage', `투표 완료! ${selectedScore}점을 주셨습니다.`, 'success');
+                        selectedScore = 0;
+                        document.querySelectorAll('.score-btn').forEach(btn => {
+                            btn.classList.remove('selected');
+                        });
+                        document.getElementById('submitVoteBtn').disabled = true;
+                    }).catch((error) => {
+                        showMessage('voterMessage', '투표 실패: ' + error.message, 'error');
                     });
-                    document.getElementById('submitVoteBtn').disabled = true;
-                }).catch((error) => {
-                    showMessage('voterMessage', '투표 실패: ' + error.message, 'error');
                 });
             });
         }
