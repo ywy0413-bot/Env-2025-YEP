@@ -481,16 +481,145 @@
             flex: 1;
         }
 
+        /* 모바일 최적화 */
         @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                border-radius: 10px;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+                padding: 0 10px;
+            }
+
+            .header p {
+                font-size: 1em;
+            }
+
+            .header::before,
+            .header::after {
+                font-size: 2em;
+                left: 10px;
+            }
+
+            .header::after {
+                left: auto;
+                right: 10px;
+            }
+
+            .event-title {
+                font-size: 1.5em;
+                padding: 15px 10px;
+            }
+
+            .section-title {
+                font-size: 1.5em;
+            }
+
             .song-input {
                 grid-template-columns: 1fr;
             }
 
             .score-buttons {
-                grid-template-columns: repeat(2, 1fr);
+                grid-template-columns: repeat(5, 1fr);
+                gap: 8px;
+            }
+
+            .score-btn {
+                font-size: 18px;
+                min-height: 50px;
+                padding: 10px;
             }
 
             .mode-buttons {
+                grid-template-columns: 1fr;
+            }
+
+            .mode-btn {
+                font-size: 1.1em;
+                padding: 25px;
+            }
+
+            .btn {
+                padding: 15px 20px;
+                font-size: 16px;
+                width: 100%;
+            }
+
+            .voter-input input,
+            .voter-input label {
+                font-size: 16px;
+            }
+
+            .voter-input input {
+                padding: 15px;
+                min-height: 50px;
+            }
+
+            .result-card h3 {
+                font-size: 1.3em;
+            }
+
+            .result-stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            .stat-value {
+                font-size: 1.8em;
+            }
+
+            .firebase-setup {
+                padding: 20px;
+            }
+
+            .config-input {
+                padding: 12px;
+                font-size: 14px;
+            }
+
+            .password-box {
+                width: 90%;
+                padding: 25px;
+            }
+
+            .password-box h3 {
+                font-size: 1.3em;
+            }
+
+            .password-box input {
+                padding: 15px;
+                font-size: 16px;
+            }
+        }
+
+        /* 작은 모바일 화면 추가 최적화 */
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.5em;
+            }
+
+            .event-title {
+                font-size: 1.3em;
+                padding: 12px 8px;
+            }
+
+            .score-buttons {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 5px;
+            }
+
+            .score-btn {
+                font-size: 16px;
+                min-height: 45px;
+                padding: 8px;
+            }
+
+            .result-stats {
                 grid-template-columns: 1fr;
             }
         }
@@ -614,10 +743,6 @@
         <div class="voter-section" id="voterSection">
             <h1 class="event-title">🎄 제1회 앤비젼 히든가왕 🎅</h1>
             <h2 class="section-title">🗳️ 점수 평가</h2>
-
-            <div style="text-align: center; margin-bottom: 20px; padding: 10px; background: rgba(255,255,255,0.9); border-radius: 10px;">
-                <strong>참여자:</strong> <span id="displayVoterName" style="color: #c41e3a; font-size: 1.2em;"></span>
-            </div>
 
             <div id="currentSongDisplay"></div>
 
