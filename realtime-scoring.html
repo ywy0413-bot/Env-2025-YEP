@@ -644,14 +644,22 @@
         </div>
     </div>
 
-    <!-- 참여자 이름 입력 모달 -->
+    <!-- 참여자 인증 모달 -->
     <div class="password-modal" id="voterNameModal">
         <div class="password-box" style="background: linear-gradient(135deg, #c41e3a 0%, #165b33 100%); color: white;">
-            <h3 style="color: #ffd700;">🎅 참여자 이름 입력</h3>
-            <p style="margin-bottom: 15px; font-size: 0.9em;">한 번만 입력하시면 모든 투표에 자동으로 적용됩니다!</p>
-            <input type="text" id="voterNameInput" placeholder="이름을 입력하세요 (예: 홍길동)" onkeypress="if(event.key==='Enter') saveVoterNameFromModal()" style="color: #333;">
-            <div class="btn-group">
-                <button class="btn btn-primary" onclick="saveVoterNameFromModal()" style="background: #ffd700; color: #333; border: none;">확인</button>
+            <h3 style="color: #ffd700;">🎅 참여자 인증</h3>
+            <p style="margin-bottom: 15px; font-size: 0.9em;">등록된 참여자만 투표할 수 있습니다</p>
+
+            <label style="display: block; text-align: left; margin-bottom: 5px; font-size: 0.9em; color: #ffd700;">참여자 선택:</label>
+            <select id="voterNameSelect" style="width: 100%; padding: 12px; margin-bottom: 15px; border: 2px solid #ffd700; border-radius: 8px; font-size: 16px; color: #333; background: white;" onchange="onParticipantSelect()">
+                <option value="">-- 이름을 선택하세요 --</option>
+            </select>
+
+            <label style="display: block; text-align: left; margin-bottom: 5px; font-size: 0.9em; color: #ffd700;">휴대전화 뒷자리 4자리:</label>
+            <input type="tel" id="voterPhoneInput" placeholder="1234" maxlength="4" pattern="[0-9]{4}" onkeypress="if(event.key==='Enter') verifyAndLogin()" style="color: #333; width: 100%; padding: 12px; border: 2px solid #ffd700; border-radius: 8px; font-size: 16px;">
+
+            <div class="btn-group" style="margin-top: 15px;">
+                <button class="btn btn-primary" onclick="verifyAndLogin()" id="verifyBtn" style="background: #ffd700; color: #333; border: none; font-weight: bold;">인증하기</button>
             </div>
             <div id="voterNameError" class="message"></div>
         </div>
@@ -715,6 +723,15 @@
         <div class="admin-section" id="adminSection">
             <h2 class="section-title">📋 관리자 패널</h2>
 
+            <h3 style="margin-top: 20px; margin-bottom: 10px; color: #165b33;">👥 참여자 관리</h3>
+            <div class="song-input">
+                <input type="text" id="participantName" placeholder="참여자 이름 (예: 홍길동)">
+                <input type="text" id="participantPhone" placeholder="휴대전화 뒷자리 4자리" maxlength="4" pattern="[0-9]{4}">
+                <button class="btn btn-success" onclick="addParticipant()">참여자 추가</button>
+            </div>
+            <div class="song-list" id="participantList"></div>
+
+            <h3 style="margin-top: 30px; margin-bottom: 10px; color: #165b33;">🎵 곡 관리</h3>
             <div class="song-input">
                 <input type="text" id="songTitle" placeholder="곡명">
                 <input type="text" id="artistName" placeholder="가수명">
@@ -806,7 +823,9 @@
         let songsRef = null;
         let votingStatusRef = null;
         let resultsRef = null;
+        let participantsRef = null; // 참여자 관리
         let pendingMode = null; // 비밀번호 확인 대기 중인 모드
+        let currentParticipantId = null; // 현재 로그인한 참여자 ID
         const ADMIN_PASSWORD = 'yep'; // 기본 비밀번호 (나중에 변경 가능)
 
         // Firebase 연결
@@ -837,6 +856,7 @@
                 votersRef = db.ref('voters');
                 votingStatusRef = db.ref('votingStatus');
                 resultsRef = db.ref('results');
+                participantsRef = db.ref('participants');
 
                 // 연결 상태 감지
                 const connectedRef = db.ref('.info/connected');
@@ -930,53 +950,116 @@
             document.getElementById('modeSelector').style.display = 'none';
 
             if (mode === 'voter') {
-                // 저장된 이름 확인
-                const savedName = localStorage.getItem('voterName');
-                if (!savedName) {
-                    // 이름이 없으면 모달 표시
+                // 저장된 참여자 ID 확인
+                const savedParticipantId = localStorage.getItem('participantId');
+                if (!savedParticipantId) {
+                    // 참여자 인증 필요 - 모달 표시
+                    loadParticipantDropdown();
                     document.getElementById('voterNameModal').style.display = 'flex';
-                    document.getElementById('voterNameInput').focus();
                 } else {
-                    // 이름이 있으면 표시하고 투표 화면 표시
-                    document.getElementById('displayVoterName').textContent = savedName;
-                    document.getElementById('voterSection').style.display = 'block';
-                    watchCurrentSong();
+                    // 이미 로그인된 참여자 - 정보 로드
+                    participantsRef.child(savedParticipantId).once('value', (snapshot) => {
+                        if (snapshot.exists()) {
+                            const participant = snapshot.val();
+                            currentParticipantId = savedParticipantId;
+                            document.getElementById('displayVoterName').textContent = participant.name;
+                            document.getElementById('voterSection').style.display = 'block';
+                            watchCurrentSong();
+                        } else {
+                            // 참여자 정보가 삭제됨 - 재인증 필요
+                            localStorage.removeItem('participantId');
+                            loadParticipantDropdown();
+                            document.getElementById('voterNameModal').style.display = 'flex';
+                        }
+                    });
                 }
             }
         }
 
-        // 참여자 이름 변경
-        function changeVoterName() {
-            const currentName = localStorage.getItem('voterName') || '';
-            document.getElementById('voterNameInput').value = currentName;
-            document.getElementById('voterNameModal').style.display = 'flex';
-            document.getElementById('voterNameInput').focus();
-            document.getElementById('voterNameInput').select(); // 텍스트 전체 선택
+        // 참여자 드롭다운 로드
+        function loadParticipantDropdown() {
+            const select = document.getElementById('voterNameSelect');
+            select.innerHTML = '<option value="">-- 이름을 선택하세요 --</option>';
+
+            participantsRef.once('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    snapshot.forEach((childSnapshot) => {
+                        const participantId = childSnapshot.key;
+                        const participant = childSnapshot.val();
+                        const option = document.createElement('option');
+                        option.value = participantId;
+                        option.textContent = participant.name;
+                        select.appendChild(option);
+                    });
+                } else {
+                    document.getElementById('voterNameError').textContent = '등록된 참여자가 없습니다. 관리자에게 문의하세요.';
+                    document.getElementById('voterNameError').style.display = 'block';
+                }
+            });
         }
 
-        // 참여자 이름 모달에서 저장
-        function saveVoterNameFromModal() {
-            const name = document.getElementById('voterNameInput').value.trim();
-            if (!name) {
-                document.getElementById('voterNameError').textContent = '이름을 입력해주세요!';
+        // 참여자 선택 시
+        function onParticipantSelect() {
+            document.getElementById('voterNameError').style.display = 'none';
+        }
+
+        // 참여자 인증 및 로그인
+        function verifyAndLogin() {
+            const selectedId = document.getElementById('voterNameSelect').value;
+            const phoneInput = document.getElementById('voterPhoneInput').value.trim();
+
+            if (!selectedId) {
+                document.getElementById('voterNameError').textContent = '참여자를 선택해주세요!';
                 document.getElementById('voterNameError').style.display = 'block';
                 return;
             }
 
-            // localStorage에 저장
-            localStorage.setItem('voterName', name);
+            if (!phoneInput || phoneInput.length !== 4 || !/^\d{4}$/.test(phoneInput)) {
+                document.getElementById('voterNameError').textContent = '휴대전화 뒷자리 4자리를 입력해주세요!';
+                document.getElementById('voterNameError').style.display = 'block';
+                return;
+            }
 
-            // 화면에 이름 표시
-            document.getElementById('displayVoterName').textContent = name;
+            // Firebase에서 참여자 정보 확인
+            participantsRef.child(selectedId).once('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    const participant = snapshot.val();
+                    if (participant.phone === phoneInput) {
+                        // 인증 성공
+                        currentParticipantId = selectedId;
+                        localStorage.setItem('participantId', selectedId);
 
-            // 모달 닫기
-            document.getElementById('voterNameModal').style.display = 'none';
-            document.getElementById('voterNameInput').value = '';
-            document.getElementById('voterNameError').style.display = 'none';
+                        // 화면에 이름 표시
+                        document.getElementById('displayVoterName').textContent = participant.name;
 
-            // 참여자 화면 표시
-            document.getElementById('voterSection').style.display = 'block';
-            watchCurrentSong();
+                        // 모달 닫기
+                        document.getElementById('voterNameModal').style.display = 'none';
+                        document.getElementById('voterNameSelect').value = '';
+                        document.getElementById('voterPhoneInput').value = '';
+                        document.getElementById('voterNameError').style.display = 'none';
+
+                        // 참여자 화면 표시
+                        document.getElementById('voterSection').style.display = 'block';
+                        watchCurrentSong();
+                    } else {
+                        // 전화번호 불일치
+                        document.getElementById('voterNameError').textContent = '전화번호가 일치하지 않습니다!';
+                        document.getElementById('voterNameError').style.display = 'block';
+                    }
+                } else {
+                    document.getElementById('voterNameError').textContent = '참여자 정보를 찾을 수 없습니다!';
+                    document.getElementById('voterNameError').style.display = 'block';
+                }
+            });
+        }
+
+        // 참여자 변경 (로그아웃 후 재인증)
+        function changeVoterName() {
+            localStorage.removeItem('participantId');
+            currentParticipantId = null;
+            loadParticipantDropdown();
+            document.getElementById('voterNameModal').style.display = 'flex';
+            document.getElementById('voterPhoneInput').value = '';
         }
 
         // 비밀번호 확인
@@ -1016,6 +1099,7 @@
                         adminSection.style.display = 'block';
                         console.log('adminSection display set to block');
                         if (db && songsRef) {
+                            loadParticipants();
                             loadSongs();
                             watchResults();
                         } else {
@@ -1065,6 +1149,79 @@
         }
 
         // 곡 추가
+        // 참여자 추가
+        function addParticipant() {
+            const name = document.getElementById('participantName').value.trim();
+            const phone = document.getElementById('participantPhone').value.trim();
+
+            if (!name) {
+                showMessage('adminMessage', '참여자 이름을 입력해주세요.', 'error');
+                return;
+            }
+
+            if (!phone || phone.length !== 4 || !/^\d{4}$/.test(phone)) {
+                showMessage('adminMessage', '휴대전화 뒷자리 4자리를 정확히 입력해주세요.', 'error');
+                return;
+            }
+
+            const newParticipantRef = participantsRef.push();
+            newParticipantRef.set({
+                name: name,
+                phone: phone,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            }).then(() => {
+                document.getElementById('participantName').value = '';
+                document.getElementById('participantPhone').value = '';
+                showMessage('adminMessage', '참여자가 추가되었습니다!', 'success');
+            }).catch((error) => {
+                showMessage('adminMessage', '참여자 추가 실패: ' + error.message, 'error');
+            });
+        }
+
+        // 참여자 목록 로드
+        function loadParticipants() {
+            const participantList = document.getElementById('participantList');
+            participantList.innerHTML = '';
+
+            participantsRef.on('value', (snapshot) => {
+                participantList.innerHTML = '';
+
+                if (!snapshot.exists()) {
+                    participantList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">등록된 참여자가 없습니다.</p>';
+                    return;
+                }
+
+                snapshot.forEach((childSnapshot) => {
+                    const participantId = childSnapshot.key;
+                    const participant = childSnapshot.val();
+
+                    const participantDiv = document.createElement('div');
+                    participantDiv.className = 'song-item';
+                    participantDiv.innerHTML = `
+                        <div>
+                            <strong>${participant.name}</strong><br>
+                            <small>전화번호: ***${participant.phone}</small>
+                        </div>
+                        <div>
+                            <button class="btn btn-danger" onclick="deleteParticipant('${participantId}')">삭제</button>
+                        </div>
+                    `;
+                    participantList.appendChild(participantDiv);
+                });
+            });
+        }
+
+        // 참여자 삭제
+        function deleteParticipant(participantId) {
+            if (confirm('정말 이 참여자를 삭제하시겠습니까?')) {
+                participantsRef.child(participantId).remove().then(() => {
+                    showMessage('adminMessage', '참여자가 삭제되었습니다.', 'success');
+                }).catch((error) => {
+                    showMessage('adminMessage', '참여자 삭제 실패: ' + error.message, 'error');
+                });
+            }
+        }
+
         function addSong() {
             const title = document.getElementById('songTitle').value.trim();
             const artist = document.getElementById('artistName').value.trim();
@@ -1249,93 +1406,107 @@
 
         // 투표 준비 확인
         function checkVoteReady() {
-            const voterName = localStorage.getItem('voterName');
             const performerGuess = document.getElementById('performerGuess').value.trim();
             const submitBtn = document.getElementById('submitVoteBtn');
 
-            // 가수 영어 호칭, 점수 입력되어야 버튼 활성화 (이름은 이미 저장됨)
-            submitBtn.disabled = !(voterName && performerGuess && selectedScore > 0);
+            // 가수 영어 호칭, 점수 입력되어야 버튼 활성화 (참여자는 이미 인증됨)
+            submitBtn.disabled = !(currentParticipantId && performerGuess && selectedScore > 0);
         }
 
         // 투표 제출
         function submitVote() {
-            const voterName = localStorage.getItem('voterName');
+            if (!currentParticipantId) {
+                showMessage('voterMessage', '참여자 인증이 필요합니다.', 'error');
+                return;
+            }
+
             const performerGuess = document.getElementById('performerGuess').value.trim();
 
-            if (!voterName || !performerGuess || selectedScore === 0) {
+            if (!performerGuess || selectedScore === 0) {
                 showMessage('voterMessage', '모든 항목을 입력해주세요.', 'error');
                 return;
             }
 
-            votingStatusRef.once('value', (snapshot) => {
-                const status = snapshot.val();
-                if (!status || !status.currentSongId || !status.isVoting) {
-                    showMessage('voterMessage', '현재 진행 중인 투표가 없습니다.', 'error');
+            // 참여자 정보 가져오기
+            participantsRef.child(currentParticipantId).once('value', (participantSnapshot) => {
+                if (!participantSnapshot.exists()) {
+                    showMessage('voterMessage', '참여자 정보를 찾을 수 없습니다.', 'error');
                     return;
                 }
 
-                const songId = status.currentSongId;
+                const participant = participantSnapshot.val();
+                const voterName = participant.name;
 
-                // 현재 곡 정보 가져오기 (정답 확인용)
-                songsRef.child(songId).once('value', (songSnapshot) => {
-                    const song = songSnapshot.val();
-                    if (!song) {
-                        showMessage('voterMessage', '곡 정보를 찾을 수 없습니다.', 'error');
+                votingStatusRef.once('value', (snapshot) => {
+                    const status = snapshot.val();
+                    if (!status || !status.currentSongId || !status.isVoting) {
+                        showMessage('voterMessage', '현재 진행 중인 투표가 없습니다.', 'error');
                         return;
                     }
 
-                    // 투표 마감 확인
-                    if (song.closed === true) {
-                        showMessage('voterMessage', '이 곡의 투표가 마감되었습니다.', 'error');
-                        return;
-                    }
+                    const songId = status.currentSongId;
 
-                    // 중복 투표 확인
-                    resultsRef.child(songId).child('votes').once('value', (votesSnapshot) => {
-                        let alreadyVoted = false;
-
-                        if (votesSnapshot.exists()) {
-                            votesSnapshot.forEach((voteChild) => {
-                                const vote = voteChild.val();
-                                if (vote.voter === voterName) {
-                                    alreadyVoted = true;
-                                }
-                            });
-                        }
-
-                        if (alreadyVoted) {
-                            showMessage('voterMessage', '이미 이 곡에 투표하셨습니다!', 'error');
+                    // 현재 곡 정보 가져오기 (정답 확인용)
+                    songsRef.child(songId).once('value', (songSnapshot) => {
+                        const song = songSnapshot.val();
+                        if (!song) {
+                            showMessage('voterMessage', '곡 정보를 찾을 수 없습니다.', 'error');
                             return;
                         }
 
-                        // 정답 확인 (대소문자 구분 없이 비교)
-                        const isCorrect = performerGuess.toLowerCase() === song.performer.toLowerCase();
+                        // 투표 마감 확인
+                        if (song.closed === true) {
+                            showMessage('voterMessage', '이 곡의 투표가 마감되었습니다.', 'error');
+                            return;
+                        }
 
-                        // 투표 저장
-                        const voteRef = resultsRef.child(songId).child('votes').push();
-                        voteRef.set({
-                            voter: voterName,
-                            score: selectedScore,
-                            performerGuess: performerGuess,
-                            isCorrect: isCorrect,
-                            timestamp: firebase.database.ServerValue.TIMESTAMP
-                        }).then(() => {
-                            const resultMsg = isCorrect
-                                ? `투표 완료! ${selectedScore}점 | ✅ 정답입니다!`
-                                : `투표 완료! ${selectedScore}점`;
-                            showMessage('voterMessage', resultMsg, 'success');
+                        // 중복 투표 확인 (participantId 기반)
+                        resultsRef.child(songId).child('votes').once('value', (votesSnapshot) => {
+                            let alreadyVoted = false;
 
-                            // 폼 초기화
-                            selectedScore = 0;
-                            document.getElementById('performerGuess').value = '';
-                            document.querySelectorAll('.score-btn').forEach(btn => {
-                                btn.classList.remove('selected');
+                            if (votesSnapshot.exists()) {
+                                votesSnapshot.forEach((voteChild) => {
+                                    const vote = voteChild.val();
+                                    if (vote.participantId === currentParticipantId) {
+                                        alreadyVoted = true;
+                                    }
+                                });
+                            }
+
+                            if (alreadyVoted) {
+                                showMessage('voterMessage', '이미 이 곡에 투표하셨습니다!', 'error');
+                                return;
+                            }
+
+                            // 정답 확인 (대소문자 구분 없이 비교)
+                            const isCorrect = performerGuess.toLowerCase() === song.performer.toLowerCase();
+
+                            // 투표 저장
+                            const voteRef = resultsRef.child(songId).child('votes').push();
+                            voteRef.set({
+                                participantId: currentParticipantId,
+                                voter: voterName,
+                                score: selectedScore,
+                                performerGuess: performerGuess,
+                                isCorrect: isCorrect,
+                                timestamp: firebase.database.ServerValue.TIMESTAMP
+                            }).then(() => {
+                                const resultMsg = isCorrect
+                                    ? `투표 완료! ${selectedScore}점 | ✅ 정답입니다!`
+                                    : `투표 완료! ${selectedScore}점`;
+                                showMessage('voterMessage', resultMsg, 'success');
+
+                                // 폼 초기화
+                                selectedScore = 0;
+                                document.getElementById('performerGuess').value = '';
+                                document.querySelectorAll('.score-btn').forEach(btn => {
+                                    btn.classList.remove('selected');
+                                });
+                                document.getElementById('submitVoteBtn').disabled = true;
+                            }).catch((error) => {
+                                showMessage('voterMessage', '투표 실패: ' + error.message, 'error');
                             });
-                            document.getElementById('submitVoteBtn').disabled = true;
-                        }).catch((error) => {
-                            showMessage('voterMessage', '투표 실패: ' + error.message, 'error');
                         });
-                    });
                 });
             });
         }
