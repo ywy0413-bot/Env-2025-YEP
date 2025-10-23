@@ -528,7 +528,11 @@
             <div id="currentSongDisplay"></div>
 
             <div class="voter-input">
-                <input type="text" id="voterName" placeholder="이름을 입력하세요" onchange="saveVoterName()">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">본인 성명:</label>
+                <input type="text" id="voterName" placeholder="예: 홍길동" onchange="saveVoterName()" style="margin-bottom: 20px;">
+
+                <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">이 노래를 부른 가수의 영어 호칭을 적어주세요:</label>
+                <input type="text" id="performerGuess" placeholder="예: Mr. Kim" oninput="checkVoteReady()">
             </div>
 
             <div class="score-buttons" id="scoreButtons">
@@ -950,8 +954,17 @@
 
             event.target.classList.add('selected');
 
+            checkVoteReady();
+        }
+
+        // 투표 준비 확인
+        function checkVoteReady() {
             const voterName = document.getElementById('voterName').value.trim();
-            document.getElementById('submitVoteBtn').disabled = !voterName;
+            const performerGuess = document.getElementById('performerGuess').value.trim();
+            const submitBtn = document.getElementById('submitVoteBtn');
+
+            // 이름, 가수 영어 호칭, 점수 모두 입력되어야 버튼 활성화
+            submitBtn.disabled = !(voterName && performerGuess && selectedScore > 0);
         }
 
         // 투표자 이름 저장
@@ -960,14 +973,16 @@
             if (voterName) {
                 localStorage.setItem('voterName', voterName);
             }
+            checkVoteReady();
         }
 
         // 투표 제출
         function submitVote() {
             const voterName = document.getElementById('voterName').value.trim();
+            const performerGuess = document.getElementById('performerGuess').value.trim();
 
-            if (!voterName || selectedScore === 0) {
-                showMessage('voterMessage', '이름과 점수를 모두 입력해주세요.', 'error');
+            if (!voterName || !performerGuess || selectedScore === 0) {
+                showMessage('voterMessage', '모든 항목을 입력해주세요.', 'error');
                 return;
             }
 
@@ -980,39 +995,59 @@
 
                 const songId = status.currentSongId;
 
-                // 중복 투표 확인
-                resultsRef.child(songId).child('votes').once('value', (votesSnapshot) => {
-                    let alreadyVoted = false;
-
-                    if (votesSnapshot.exists()) {
-                        votesSnapshot.forEach((voteChild) => {
-                            const vote = voteChild.val();
-                            if (vote.voter === voterName) {
-                                alreadyVoted = true;
-                            }
-                        });
-                    }
-
-                    if (alreadyVoted) {
-                        showMessage('voterMessage', '이미 이 곡에 투표하셨습니다!', 'error');
+                // 현재 곡 정보 가져오기 (정답 확인용)
+                songsRef.child(songId).once('value', (songSnapshot) => {
+                    const song = songSnapshot.val();
+                    if (!song) {
+                        showMessage('voterMessage', '곡 정보를 찾을 수 없습니다.', 'error');
                         return;
                     }
 
-                    // 투표 저장
-                    const voteRef = resultsRef.child(songId).child('votes').push();
-                    voteRef.set({
-                        voter: voterName,
-                        score: selectedScore,
-                        timestamp: firebase.database.ServerValue.TIMESTAMP
-                    }).then(() => {
-                        showMessage('voterMessage', `투표 완료! ${selectedScore}점을 주셨습니다.`, 'success');
-                        selectedScore = 0;
-                        document.querySelectorAll('.score-btn').forEach(btn => {
-                            btn.classList.remove('selected');
+                    // 중복 투표 확인
+                    resultsRef.child(songId).child('votes').once('value', (votesSnapshot) => {
+                        let alreadyVoted = false;
+
+                        if (votesSnapshot.exists()) {
+                            votesSnapshot.forEach((voteChild) => {
+                                const vote = voteChild.val();
+                                if (vote.voter === voterName) {
+                                    alreadyVoted = true;
+                                }
+                            });
+                        }
+
+                        if (alreadyVoted) {
+                            showMessage('voterMessage', '이미 이 곡에 투표하셨습니다!', 'error');
+                            return;
+                        }
+
+                        // 정답 확인 (대소문자 구분 없이 비교)
+                        const isCorrect = performerGuess.toLowerCase() === song.performer.toLowerCase();
+
+                        // 투표 저장
+                        const voteRef = resultsRef.child(songId).child('votes').push();
+                        voteRef.set({
+                            voter: voterName,
+                            score: selectedScore,
+                            performerGuess: performerGuess,
+                            isCorrect: isCorrect,
+                            timestamp: firebase.database.ServerValue.TIMESTAMP
+                        }).then(() => {
+                            const resultMsg = isCorrect
+                                ? `투표 완료! ${selectedScore}점 | ✅ 정답입니다!`
+                                : `투표 완료! ${selectedScore}점`;
+                            showMessage('voterMessage', resultMsg, 'success');
+
+                            // 폼 초기화
+                            selectedScore = 0;
+                            document.getElementById('performerGuess').value = '';
+                            document.querySelectorAll('.score-btn').forEach(btn => {
+                                btn.classList.remove('selected');
+                            });
+                            document.getElementById('submitVoteBtn').disabled = true;
+                        }).catch((error) => {
+                            showMessage('voterMessage', '투표 실패: ' + error.message, 'error');
                         });
-                        document.getElementById('submitVoteBtn').disabled = true;
-                    }).catch((error) => {
-                        showMessage('voterMessage', '투표 실패: ' + error.message, 'error');
                     });
                 });
             });
@@ -1030,6 +1065,7 @@
 
                         let totalScore = 0;
                         let voteCount = 0;
+                        let correctVoters = []; // 정답자 목록
 
                         if (snapshot.exists() && snapshot.child(songId).exists()) {
                             const votes = snapshot.child(songId).child('votes').val();
@@ -1037,6 +1073,10 @@
                                 Object.values(votes).forEach(vote => {
                                     totalScore += vote.score;
                                     voteCount++;
+                                    // 정답자 수집
+                                    if (vote.isCorrect) {
+                                        correctVoters.push(vote.voter);
+                                    }
                                 });
                             }
                         }
@@ -1050,7 +1090,8 @@
                             performer: song.performer,
                             totalScore: totalScore,
                             voteCount: voteCount,
-                            averageScore: parseFloat(averageScore)
+                            averageScore: parseFloat(averageScore),
+                            correctVoters: correctVoters // 정답자 목록 추가
                         });
                     });
 
@@ -1087,10 +1128,19 @@
                             <div class="stat-label">투표 수</div>
                         </div>
                         <div class="stat-box">
-                            <div class="stat-value">${result.totalScore}</div>
-                            <div class="stat-label">총점</div>
+                            <div class="stat-value">${result.correctVoters.length}</div>
+                            <div class="stat-label">정답자 수</div>
                         </div>
                     </div>
+                    ${result.correctVoters.length > 0 ? `
+                        <div style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                            <strong>✅ 정답자:</strong> ${result.correctVoters.join(', ')}
+                        </div>
+                    ` : `
+                        <div style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; color: #999;">
+                            아직 정답자가 없습니다
+                        </div>
+                    `}
                 </div>
             `).join('');
         }
