@@ -635,19 +635,27 @@
 
         // 저장된 설정 불러오기
         window.onload = function() {
-            const savedConfig = localStorage.getItem('firebaseConfig');
-            if (savedConfig) {
-                const config = JSON.parse(savedConfig);
-                document.getElementById('apiKey').value = config.apiKey;
-                document.getElementById('authDomain').value = config.authDomain;
-                document.getElementById('databaseURL').value = config.databaseURL;
-                document.getElementById('projectId').value = config.projectId;
+            // 기본 Firebase 설정 (미리 설정됨)
+            const defaultConfig = {
+                apiKey: "AIzaSyCRrTkChKaQwibV3yEHQA-4s1izX0f-o2M",
+                authDomain: "env-2025-yep.firebaseapp.com",
+                databaseURL: "https://env-2025-yep-default-rtdb.asia-southeast1.firebasedatabase.app",
+                projectId: "env-2025-yep"
+            };
 
-                // 자동으로 Firebase 연결 시도
-                setTimeout(() => {
-                    connectFirebase();
-                }, 500);
-            }
+            const savedConfig = localStorage.getItem('firebaseConfig');
+            const config = savedConfig ? JSON.parse(savedConfig) : defaultConfig;
+
+            // 입력란에 자동으로 채우기
+            document.getElementById('apiKey').value = config.apiKey;
+            document.getElementById('authDomain').value = config.authDomain;
+            document.getElementById('databaseURL').value = config.databaseURL;
+            document.getElementById('projectId').value = config.projectId;
+
+            // 자동으로 Firebase 연결 시도
+            setTimeout(() => {
+                connectFirebase();
+            }, 500);
 
             // 저장된 투표자 이름 불러오기
             const savedVoterName = localStorage.getItem('voterName');
