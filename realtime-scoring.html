@@ -529,10 +529,10 @@
 
             <div class="voter-input">
                 <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">본인 성명:</label>
-                <input type="text" id="voterName" placeholder="예: 홍길동" onchange="saveVoterName()" style="margin-bottom: 20px;">
+                <input type="text" id="voterName" onchange="saveVoterName()" style="margin-bottom: 20px;">
 
                 <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">이 노래를 부른 가수의 영어 호칭을 적어주세요:</label>
-                <input type="text" id="performerGuess" placeholder="예: Mr. Kim" oninput="checkVoteReady()">
+                <input type="text" id="performerGuess" oninput="checkVoteReady()">
             </div>
 
             <div class="score-buttons" id="scoreButtons">
