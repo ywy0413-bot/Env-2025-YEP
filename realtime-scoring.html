@@ -888,6 +888,8 @@
 
         // 저장된 설정 불러오기
         window.onload = function() {
+            console.log('페이지 로드 완료');
+
             // 기본 Firebase 설정 (미리 설정됨)
             const defaultConfig = {
                 apiKey: "AIzaSyCRrTkChKaQwibV3yEHQA-4s1izX0f-o2M",
@@ -905,17 +907,29 @@
             document.getElementById('databaseURL').value = config.databaseURL;
             document.getElementById('projectId').value = config.projectId;
 
+            console.log('Firebase 설정 입력 완료');
+
             // Firebase CDN이 로드될 때까지 기다린 후 자동 연결
             function tryAutoConnect() {
+                console.log('자동 연결 시도 중...');
                 if (typeof firebase !== 'undefined') {
-                    connectFirebase();
+                    console.log('Firebase 로드됨 - 연결 시작');
+                    try {
+                        connectFirebase();
+                    } catch (error) {
+                        console.error('연결 에러:', error);
+                        // 에러 발생 시에도 1초 후 재시도
+                        setTimeout(tryAutoConnect, 1000);
+                    }
                 } else {
+                    console.log('Firebase 로딩 대기 중...');
                     // Firebase 로드 안 됨 - 1초 후 재시도
                     setTimeout(tryAutoConnect, 1000);
                 }
             }
 
-            setTimeout(tryAutoConnect, 500);
+            // 2초 후에 자동 연결 시도 (Firebase CDN 로드 여유 시간)
+            setTimeout(tryAutoConnect, 2000);
         };
 
         function toggleFirebaseGuide() {
