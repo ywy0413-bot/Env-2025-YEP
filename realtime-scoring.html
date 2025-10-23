@@ -660,12 +660,6 @@
             setTimeout(() => {
                 connectFirebase();
             }, 500);
-
-            // 저장된 투표자 이름 불러오기
-            const savedVoterName = localStorage.getItem('voterName');
-            if (savedVoterName) {
-                document.getElementById('voterName').value = savedVoterName;
-            }
         };
 
         function toggleFirebaseGuide() {
@@ -844,13 +838,19 @@
 
                     const songDiv = document.createElement('div');
                     songDiv.className = 'song-item';
+                    const isClosed = song.closed === true;
+                    const statusBadge = isClosed ? '<span style="background: #dc3545; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-left: 10px;">마감</span>' : '<span style="background: #28a745; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-left: 10px;">진행중</span>';
                     songDiv.innerHTML = `
                         <div>
-                            <strong>${song.title}</strong> - ${song.artist}<br>
+                            <strong>${song.title}</strong> - ${song.artist}${statusBadge}<br>
                             <small>참가자: ${song.performer}</small>
                         </div>
                         <div>
                             <button class="btn btn-success" onclick="setCurrentSong('${songId}')" style="margin-right: 5px;">현재 곡으로</button>
+                            ${isClosed
+                                ? `<button class="btn" onclick="reopenSongVoting('${songId}')" style="margin-right: 5px; background: #17a2b8; color: white;">투표 재개</button>`
+                                : `<button class="btn" onclick="closeSongVoting('${songId}')" style="margin-right: 5px; background: #ffc107; color: #333;">투표 마감</button>`
+                            }
                             <button class="btn btn-danger" onclick="deleteSong('${songId}')">삭제</button>
                         </div>
                     `;
@@ -879,6 +879,26 @@
                     showMessage('adminMessage', '곡이 삭제되었습니다.', 'success');
                 });
             }
+        }
+
+        // 곡별 투표 마감
+        function closeSongVoting(songId) {
+            if (confirm('이 곡의 투표를 마감하시겠습니까? 마감 후에는 추가 투표가 불가능합니다.')) {
+                songsRef.child(songId).update({
+                    closed: true
+                }).then(() => {
+                    showMessage('adminMessage', '해당 곡의 투표가 마감되었습니다.', 'info');
+                });
+            }
+        }
+
+        // 곡별 투표 재개
+        function reopenSongVoting(songId) {
+            songsRef.child(songId).update({
+                closed: false
+            }).then(() => {
+                showMessage('adminMessage', '해당 곡의 투표가 재개되었습니다.', 'success');
+            });
         }
 
         // 투표 시작
@@ -1000,6 +1020,12 @@
                     const song = songSnapshot.val();
                     if (!song) {
                         showMessage('voterMessage', '곡 정보를 찾을 수 없습니다.', 'error');
+                        return;
+                    }
+
+                    // 투표 마감 확인
+                    if (song.closed === true) {
+                        showMessage('voterMessage', '이 곡의 투표가 마감되었습니다.', 'error');
                         return;
                     }
 
