@@ -655,8 +655,8 @@
                 <option value="">-- 이름을 선택하세요 --</option>
             </select>
 
-            <label style="display: block; text-align: left; margin-bottom: 5px; font-size: 0.9em; color: #ffd700;">휴대전화 뒷자리 4자리:</label>
-            <input type="tel" id="voterPhoneInput" placeholder="1234" maxlength="4" pattern="[0-9]{4}" onkeypress="if(event.key==='Enter') verifyAndLogin()" style="color: #333; width: 100%; padding: 12px; border: 2px solid #ffd700; border-radius: 8px; font-size: 16px;">
+            <label style="display: block; text-align: left; margin-bottom: 5px; font-size: 0.9em; color: #ffd700;">비밀번호 4자리:</label>
+            <input type="password" id="voterPinInput" placeholder="****" maxlength="4" pattern="[0-9]{4}" onkeypress="if(event.key==='Enter') verifyAndLogin()" style="color: #333; width: 100%; padding: 12px; border: 2px solid #ffd700; border-radius: 8px; font-size: 16px;">
 
             <div class="btn-group" style="margin-top: 15px;">
                 <button class="btn btn-primary" onclick="verifyAndLogin()" id="verifyBtn" style="background: #ffd700; color: #333; border: none; font-weight: bold;">인증하기</button>
@@ -726,7 +726,7 @@
             <h3 style="margin-top: 20px; margin-bottom: 10px; color: #165b33;">👥 참여자 관리</h3>
             <div class="song-input">
                 <input type="text" id="participantName" placeholder="참여자 이름 (예: 홍길동)">
-                <input type="text" id="participantPhone" placeholder="휴대전화 뒷자리 4자리" maxlength="4" pattern="[0-9]{4}">
+                <input type="text" id="participantPin" placeholder="비밀번호 4자리 (숫자)" maxlength="4" pattern="[0-9]{4}">
                 <button class="btn btn-success" onclick="addParticipant()">참여자 추가</button>
             </div>
             <div class="song-list" id="participantList"></div>
@@ -1006,7 +1006,7 @@
         // 참여자 인증 및 로그인
         function verifyAndLogin() {
             const selectedId = document.getElementById('voterNameSelect').value;
-            const phoneInput = document.getElementById('voterPhoneInput').value.trim();
+            const pinInput = document.getElementById('voterPinInput').value.trim();
 
             if (!selectedId) {
                 document.getElementById('voterNameError').textContent = '참여자를 선택해주세요!';
@@ -1014,8 +1014,8 @@
                 return;
             }
 
-            if (!phoneInput || phoneInput.length !== 4 || !/^\d{4}$/.test(phoneInput)) {
-                document.getElementById('voterNameError').textContent = '휴대전화 뒷자리 4자리를 입력해주세요!';
+            if (!pinInput || pinInput.length !== 4 || !/^\d{4}$/.test(pinInput)) {
+                document.getElementById('voterNameError').textContent = '비밀번호 4자리를 입력해주세요!';
                 document.getElementById('voterNameError').style.display = 'block';
                 return;
             }
@@ -1024,7 +1024,7 @@
             participantsRef.child(selectedId).once('value', (snapshot) => {
                 if (snapshot.exists()) {
                     const participant = snapshot.val();
-                    if (participant.phone === phoneInput) {
+                    if (participant.pin === pinInput) {
                         // 인증 성공
                         currentParticipantId = selectedId;
                         localStorage.setItem('participantId', selectedId);
@@ -1035,15 +1035,15 @@
                         // 모달 닫기
                         document.getElementById('voterNameModal').style.display = 'none';
                         document.getElementById('voterNameSelect').value = '';
-                        document.getElementById('voterPhoneInput').value = '';
+                        document.getElementById('voterPinInput').value = '';
                         document.getElementById('voterNameError').style.display = 'none';
 
                         // 참여자 화면 표시
                         document.getElementById('voterSection').style.display = 'block';
                         watchCurrentSong();
                     } else {
-                        // 전화번호 불일치
-                        document.getElementById('voterNameError').textContent = '전화번호가 일치하지 않습니다!';
+                        // 비밀번호 불일치
+                        document.getElementById('voterNameError').textContent = '비밀번호가 일치하지 않습니다!';
                         document.getElementById('voterNameError').style.display = 'block';
                     }
                 } else {
@@ -1059,7 +1059,7 @@
             currentParticipantId = null;
             loadParticipantDropdown();
             document.getElementById('voterNameModal').style.display = 'flex';
-            document.getElementById('voterPhoneInput').value = '';
+            document.getElementById('voterPinInput').value = '';
         }
 
         // 비밀번호 확인
@@ -1152,26 +1152,26 @@
         // 참여자 추가
         function addParticipant() {
             const name = document.getElementById('participantName').value.trim();
-            const phone = document.getElementById('participantPhone').value.trim();
+            const pin = document.getElementById('participantPin').value.trim();
 
             if (!name) {
                 showMessage('adminMessage', '참여자 이름을 입력해주세요.', 'error');
                 return;
             }
 
-            if (!phone || phone.length !== 4 || !/^\d{4}$/.test(phone)) {
-                showMessage('adminMessage', '휴대전화 뒷자리 4자리를 정확히 입력해주세요.', 'error');
+            if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+                showMessage('adminMessage', '비밀번호 4자리를 정확히 입력해주세요.', 'error');
                 return;
             }
 
             const newParticipantRef = participantsRef.push();
             newParticipantRef.set({
                 name: name,
-                phone: phone,
+                pin: pin,
                 timestamp: firebase.database.ServerValue.TIMESTAMP
             }).then(() => {
                 document.getElementById('participantName').value = '';
-                document.getElementById('participantPhone').value = '';
+                document.getElementById('participantPin').value = '';
                 showMessage('adminMessage', '참여자가 추가되었습니다!', 'success');
             }).catch((error) => {
                 showMessage('adminMessage', '참여자 추가 실패: ' + error.message, 'error');
@@ -1200,7 +1200,7 @@
                     participantDiv.innerHTML = `
                         <div>
                             <strong>${participant.name}</strong><br>
-                            <small>전화번호: ***${participant.phone}</small>
+                            <small>PIN: ****</small>
                         </div>
                         <div>
                             <button class="btn btn-danger" onclick="deleteParticipant('${participantId}')">삭제</button>
