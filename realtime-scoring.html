@@ -848,7 +848,10 @@
                     projectId: projectId
                 };
 
-                firebase.initializeApp(firebaseConfig);
+                // Firebase가 이미 초기화되어 있는지 확인
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
                 db = firebase.database();
 
                 // 참조 초기화
@@ -902,10 +905,17 @@
             document.getElementById('databaseURL').value = config.databaseURL;
             document.getElementById('projectId').value = config.projectId;
 
-            // 자동으로 Firebase 연결 시도
-            setTimeout(() => {
-                connectFirebase();
-            }, 500);
+            // Firebase CDN이 로드될 때까지 기다린 후 자동 연결
+            function tryAutoConnect() {
+                if (typeof firebase !== 'undefined') {
+                    connectFirebase();
+                } else {
+                    // Firebase 로드 안 됨 - 1초 후 재시도
+                    setTimeout(tryAutoConnect, 1000);
+                }
+            }
+
+            setTimeout(tryAutoConnect, 500);
         };
 
         function toggleFirebaseGuide() {
