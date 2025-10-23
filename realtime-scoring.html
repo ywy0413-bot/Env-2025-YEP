@@ -683,6 +683,12 @@
             }
 
             // 참여자 모드는 비밀번호 불필요
+            // Firebase 연결 확인
+            if (!db || !songsRef) {
+                alert('Firebase 연결이 필요합니다. 페이지를 새로고침하고 Firebase 설정을 완료해주세요.');
+                return;
+            }
+
             currentMode = mode;
             document.getElementById('modeSelector').style.display = 'none';
 
@@ -698,6 +704,13 @@
 
             if (inputPassword === ADMIN_PASSWORD) {
                 closePasswordModal();
+
+                // Firebase 연결 확인
+                if (!db || !songsRef) {
+                    alert('Firebase 연결이 필요합니다. 페이지를 새로고침하고 Firebase 설정을 완료해주세요.');
+                    return;
+                }
+
                 currentMode = pendingMode;
                 document.getElementById('modeSelector').style.display = 'none';
 
