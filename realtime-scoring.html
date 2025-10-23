@@ -927,8 +927,7 @@
                     document.getElementById('voterNameModal').style.display = 'flex';
                     document.getElementById('voterNameInput').focus();
                 } else {
-                    // 이름이 있으면 바로 표시
-                    document.getElementById('displayVoterName').textContent = savedName;
+                    // 이름이 있으면 바로 투표 화면 표시
                     document.getElementById('voterSection').style.display = 'block';
                     watchCurrentSong();
                 }
@@ -946,9 +945,6 @@
 
             // localStorage에 저장
             localStorage.setItem('voterName', name);
-
-            // 화면에 표시
-            document.getElementById('displayVoterName').textContent = name;
 
             // 모달 닫기
             document.getElementById('voterNameModal').style.display = 'none';
