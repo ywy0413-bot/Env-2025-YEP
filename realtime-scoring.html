@@ -717,10 +717,17 @@
                 }
 
                 currentMode = pendingMode;
+
+                // firebaseSetup 숨기기
+                document.getElementById('firebaseSetup').style.display = 'none';
                 document.getElementById('modeSelector').style.display = 'none';
 
                 if (pendingMode === 'admin') {
-                    document.getElementById('adminSection').style.display = 'block';
+                    console.log('관리자 모드 진입 중...');
+                    const adminSection = document.getElementById('adminSection');
+                    console.log('adminSection element:', adminSection);
+                    adminSection.style.display = 'block';
+                    console.log('adminSection display set to block');
                     loadSongs();
                     watchResults();
                 } else if (pendingMode === 'display') {
