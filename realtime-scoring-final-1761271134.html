@@ -1868,6 +1868,59 @@
             `).join('');
         }
 
+        // 음향 효과 생성 함수들
+        function playSound(frequency, duration, type = 'sine') {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.value = frequency;
+            oscillator.type = type;
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        // 일반 순위 발표 소리
+        function playNormalRankSound() {
+            playSound(400, 0.15);
+        }
+
+        // 3위 발표 소리 (동메달)
+        function playBronzeSound() {
+            playSound(500, 0.2);
+            setTimeout(() => playSound(600, 0.2), 100);
+        }
+
+        // 2위 발표 소리 (은메달)
+        function playSilverSound() {
+            playSound(600, 0.25);
+            setTimeout(() => playSound(700, 0.25), 120);
+            setTimeout(() => playSound(800, 0.25), 240);
+        }
+
+        // 1위 발표 소리 (금메달 - 팡파레)
+        function playGoldSound() {
+            // 드럼롤 효과
+            for (let i = 0; i < 8; i++) {
+                setTimeout(() => playSound(150, 0.05, 'square'), i * 80);
+            }
+
+            // 팡파레
+            setTimeout(() => {
+                playSound(523, 0.3); // C
+                setTimeout(() => playSound(659, 0.3), 150); // E
+                setTimeout(() => playSound(784, 0.5), 300); // G
+                setTimeout(() => playSound(1047, 0.8), 500); // High C
+            }, 700);
+        }
+
         // 순위 발표 애니메이션 (하위 순위부터)
         function revealRankings() {
             const displayResults = document.getElementById('displayResults');
@@ -1888,20 +1941,48 @@
 
             // 하위 순위부터 순차적으로 공개 (역순)
             const totalCards = cards.length;
+            let cumulativeDelay = 0;
+
             for (let i = totalCards - 1; i >= 0; i--) {
-                const delay = (totalCards - 1 - i) * 1500; // 1.5초 간격
+                const rank = i + 1; // 실제 순위 (1-based)
+
+                // 순위별 지연 시간 설정
+                let intervalDelay;
+                if (rank === 1) {
+                    intervalDelay = 5000; // 1위: 5초
+                } else if (rank === 2) {
+                    intervalDelay = 4000; // 2위: 4초
+                } else if (rank === 3) {
+                    intervalDelay = 3000; // 3위: 3초
+                } else {
+                    intervalDelay = 1500; // 4위 이하: 1.5초
+                }
+
                 setTimeout(() => {
                     cards[i].classList.add('revealed');
 
-                    // 1위 발표 시 불꽃 효과
+                    // 순위별 음향 효과
                     if (i === 0) {
+                        // 1위
+                        playGoldSound();
                         launchFireworks();
                         // 버튼 다시 활성화
                         setTimeout(() => {
                             document.getElementById('revealBtn').disabled = false;
                         }, 2000);
+                    } else if (i === 1) {
+                        // 2위
+                        playSilverSound();
+                    } else if (i === 2) {
+                        // 3위
+                        playBronzeSound();
+                    } else {
+                        // 4위 이하
+                        playNormalRankSound();
                     }
-                }, delay);
+                }, cumulativeDelay);
+
+                cumulativeDelay += intervalDelay;
             }
         }
 
