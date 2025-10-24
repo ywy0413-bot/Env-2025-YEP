@@ -1039,12 +1039,23 @@
 
             participantsRef.once('value', (snapshot) => {
                 if (snapshot.exists()) {
+                    // 참여자를 배열로 수집
+                    const participants = [];
                     snapshot.forEach((childSnapshot) => {
-                        const participantId = childSnapshot.key;
-                        const participant = childSnapshot.val();
+                        participants.push({
+                            id: childSnapshot.key,
+                            data: childSnapshot.val()
+                        });
+                    });
+
+                    // 이름으로 가나다순 정렬
+                    participants.sort((a, b) => a.data.name.localeCompare(b.data.name, 'ko'));
+
+                    // 정렬된 순서대로 옵션 추가
+                    participants.forEach(participant => {
                         const option = document.createElement('option');
-                        option.value = participantId;
-                        option.textContent = participant.name;
+                        option.value = participant.id;
+                        option.textContent = participant.data.name;
                         select.appendChild(option);
                     });
                 } else {
@@ -1247,19 +1258,29 @@
                     return;
                 }
 
+                // 참여자를 배열로 수집
+                const participants = [];
                 snapshot.forEach((childSnapshot) => {
-                    const participantId = childSnapshot.key;
-                    const participant = childSnapshot.val();
+                    participants.push({
+                        id: childSnapshot.key,
+                        data: childSnapshot.val()
+                    });
+                });
 
+                // 이름으로 가나다순 정렬
+                participants.sort((a, b) => a.data.name.localeCompare(b.data.name, 'ko'));
+
+                // 정렬된 순서대로 표시
+                participants.forEach(item => {
                     const participantDiv = document.createElement('div');
                     participantDiv.className = 'song-item';
                     participantDiv.innerHTML = `
                         <div>
-                            <strong>${participant.name}</strong><br>
+                            <strong>${item.data.name}</strong><br>
                             <small>PIN: ****</small>
                         </div>
                         <div>
-                            <button class="btn btn-danger" onclick="deleteParticipant('${participantId}')">삭제</button>
+                            <button class="btn btn-danger" onclick="deleteParticipant('${item.id}')">삭제</button>
                         </div>
                     `;
                     participantList.appendChild(participantDiv);
