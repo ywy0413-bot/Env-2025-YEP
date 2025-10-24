@@ -331,12 +331,112 @@
             border-radius: 10px;
             margin-bottom: 15px;
             border-left: 5px solid #667eea;
+            transition: all 0.5s ease;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .result-card.revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 1위 스타일 - 금메달 */
+        .result-card.rank-1 {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: white;
+            border-left: 8px solid #FFD700;
+            transform: scale(1.05);
+            box-shadow: 0 15px 40px rgba(255, 215, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result-card.rank-1::before {
+            content: '👑';
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            font-size: 120px;
+            opacity: 0.15;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        /* 2위 스타일 - 은메달 */
+        .result-card.rank-2 {
+            background: linear-gradient(135deg, #C0C0C0 0%, #808080 100%);
+            color: white;
+            border-left: 7px solid #C0C0C0;
+            transform: scale(1.02);
+            box-shadow: 0 10px 30px rgba(192, 192, 192, 0.4);
+        }
+
+        /* 3위 스타일 - 동메달 */
+        .result-card.rank-3 {
+            background: linear-gradient(135deg, #CD7F32 0%, #8B4513 100%);
+            color: white;
+            border-left: 6px solid #CD7F32;
+            box-shadow: 0 8px 25px rgba(205, 127, 50, 0.4);
         }
 
         .result-card.winner {
             background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
             color: white;
             border-left-color: #ffd89b;
+        }
+
+        /* 애니메이션 효과 */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* 불꽃 효과 */
+        @keyframes firework {
+            0% {
+                transform: translate(0, 0);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--x), var(--y));
+                opacity: 0;
+            }
+        }
+
+        .firework {
+            position: fixed;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            animation: firework 1s ease-out forwards;
+            z-index: 9999;
         }
 
         .result-stats {
@@ -357,6 +457,12 @@
             background: rgba(255, 255, 255, 0.2);
         }
 
+        .result-card.rank-1 .stat-box,
+        .result-card.rank-2 .stat-box,
+        .result-card.rank-3 .stat-box {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
         .stat-value {
             font-size: 2em;
             font-weight: bold;
@@ -367,6 +473,13 @@
             color: #ffd89b;
         }
 
+        .result-card.rank-1 .stat-value,
+        .result-card.rank-2 .stat-value,
+        .result-card.rank-3 .stat-value {
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
         .stat-label {
             color: #666;
             font-size: 0.9em;
@@ -375,6 +488,12 @@
 
         .result-card.winner .stat-label {
             color: rgba(255, 255, 255, 0.9);
+        }
+
+        .result-card.rank-1 .stat-label,
+        .result-card.rank-2 .stat-label,
+        .result-card.rank-3 .stat-label {
+            color: rgba(255, 255, 255, 0.95);
         }
 
         .message {
@@ -802,6 +921,18 @@
         <!-- 결과 화면 섹션 -->
         <div class="display-section" id="displaySection">
             <h2 class="section-title">🏆 실시간 순위</h2>
+
+            <div class="control-buttons" style="margin-bottom: 20px;">
+                <button class="btn btn-success" onclick="revealRankings()" id="revealBtn" style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: white; font-size: 1.2em; padding: 15px 30px;">
+                    ✨ 순위 발표 시작
+                </button>
+                <button class="btn" onclick="showAllRankings()" id="showAllBtn" style="background: #667eea; color: white;">
+                    전체 결과 보기
+                </button>
+                <button class="btn" onclick="hideAllRankings()" id="hideAllBtn" style="background: #6c757d; color: white; display: none;">
+                    결과 숨기기
+                </button>
+            </div>
 
             <div id="displayResults"></div>
 
@@ -1679,9 +1810,27 @@
                 return;
             }
 
+            // 순위별 이모지 및 타이틀
+            const getRankDisplay = (index, voteCount) => {
+                if (voteCount === 0) return (index + 1) + '위 ';
+                if (index === 0) return '🥇 1위 ';
+                if (index === 1) return '🥈 2위 ';
+                if (index === 2) return '🥉 3위 ';
+                return (index + 1) + '위 ';
+            };
+
+            // 순위별 클래스
+            const getRankClass = (index, voteCount) => {
+                if (voteCount === 0) return '';
+                if (index === 0) return 'rank-1';
+                if (index === 1) return 'rank-2';
+                if (index === 2) return 'rank-3';
+                return '';
+            };
+
             container.innerHTML = results.map((result, index) => `
-                <div class="result-card ${index === 0 && result.voteCount > 0 ? 'winner' : ''}">
-                    <h3>${index === 0 && result.voteCount > 0 ? '🏆 ' : (index + 1) + '위 '}${result.title}</h3>
+                <div class="result-card ${getRankClass(index, result.voteCount)}" data-rank="${index}">
+                    <h3>${getRankDisplay(index, result.voteCount)}${result.title}</h3>
                     <p>가수: ${result.artist} | 참가자: ${result.performer}</p>
                     <div class="result-stats">
                         <div class="stat-box">
@@ -1717,6 +1866,103 @@
                     `}
                 </div>
             `).join('');
+        }
+
+        // 순위 발표 애니메이션 (하위 순위부터)
+        function revealRankings() {
+            const displayResults = document.getElementById('displayResults');
+            const cards = displayResults.querySelectorAll('.result-card');
+
+            if (cards.length === 0) {
+                alert('발표할 결과가 없습니다!');
+                return;
+            }
+
+            // 모든 카드 숨기기
+            cards.forEach(card => {
+                card.classList.remove('revealed');
+            });
+
+            // 버튼 비활성화
+            document.getElementById('revealBtn').disabled = true;
+
+            // 하위 순위부터 순차적으로 공개 (역순)
+            const totalCards = cards.length;
+            for (let i = totalCards - 1; i >= 0; i--) {
+                const delay = (totalCards - 1 - i) * 1500; // 1.5초 간격
+                setTimeout(() => {
+                    cards[i].classList.add('revealed');
+
+                    // 1위 발표 시 불꽃 효과
+                    if (i === 0) {
+                        launchFireworks();
+                        // 버튼 다시 활성화
+                        setTimeout(() => {
+                            document.getElementById('revealBtn').disabled = false;
+                        }, 2000);
+                    }
+                }, delay);
+            }
+        }
+
+        // 전체 결과 즉시 보기
+        function showAllRankings() {
+            const displayResults = document.getElementById('displayResults');
+            const cards = displayResults.querySelectorAll('.result-card');
+
+            cards.forEach(card => {
+                card.classList.add('revealed');
+            });
+
+            document.getElementById('showAllBtn').style.display = 'none';
+            document.getElementById('hideAllBtn').style.display = 'inline-block';
+        }
+
+        // 전체 결과 숨기기
+        function hideAllRankings() {
+            const displayResults = document.getElementById('displayResults');
+            const cards = displayResults.querySelectorAll('.result-card');
+
+            cards.forEach(card => {
+                card.classList.remove('revealed');
+            });
+
+            document.getElementById('showAllBtn').style.display = 'inline-block';
+            document.getElementById('hideAllBtn').style.display = 'none';
+        }
+
+        // 불꽃 효과
+        function launchFireworks() {
+            const colors = ['#FFD700', '#FFA500', '#FF6347', '#FF1493', '#00FF00', '#00BFFF'];
+            const fireworksCount = 30;
+
+            for (let i = 0; i < fireworksCount; i++) {
+                setTimeout(() => {
+                    createFirework(colors[Math.floor(Math.random() * colors.length)]);
+                }, i * 50);
+            }
+        }
+
+        function createFirework(color) {
+            const firework = document.createElement('div');
+            firework.className = 'firework';
+            firework.style.backgroundColor = color;
+            firework.style.left = Math.random() * window.innerWidth + 'px';
+            firework.style.top = Math.random() * window.innerHeight * 0.5 + 'px';
+
+            const angle = Math.random() * Math.PI * 2;
+            const velocity = 50 + Math.random() * 100;
+            const x = Math.cos(angle) * velocity;
+            const y = Math.sin(angle) * velocity;
+
+            firework.style.setProperty('--x', x + 'px');
+            firework.style.setProperty('--y', y + 'px');
+
+            document.body.appendChild(firework);
+
+            setTimeout(() => {
+                firework.remove();
+            }, 1000);
         }
 
         // 메시지 표시
