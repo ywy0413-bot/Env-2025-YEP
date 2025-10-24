@@ -1659,7 +1659,7 @@
 
             container.innerHTML = results.map((result, index) => `
                 <div class="result-card ${index === 0 && result.voteCount > 0 ? 'winner' : ''}">
-                    <h3>${index === 0 && result.voteCount > 0 ? '🏆 ' : `${index + 1}위 `}${result.title}</h3>
+                    <h3>${index === 0 && result.voteCount > 0 ? '🏆 ' : (index + 1) + '위 '}${result.title}</h3>
                     <p>가수: ${result.artist} | 참가자: ${result.performer}</p>
                     <div class="result-stats">
                         <div class="stat-box">
