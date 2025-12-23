@@ -1520,11 +1520,23 @@
         // 곡 점수 초기화
         function resetSongScore(songId) {
             if (confirm('이 곡의 점수를 초기화하시겠습니까? (곡 정보는 유지됩니다)')) {
-                resultsRef.child(songId).remove().then(() => {
-                    showMessage('adminMessage', '점수가 초기화되었습니다.', 'success');
-                }).catch((error) => {
-                    showMessage('adminMessage', '점수 초기화 실패: ' + error.message, 'error');
-                });
+                console.log('점수 초기화 시작 - songId:', songId);
+                console.log('resultsRef:', resultsRef);
+
+                if (!resultsRef) {
+                    showMessage('adminMessage', 'Firebase 연결이 없습니다. 페이지를 새로고침해주세요.', 'error');
+                    return;
+                }
+
+                resultsRef.child(songId).child('votes').remove()
+                    .then(() => {
+                        console.log('점수 초기화 성공');
+                        showMessage('adminMessage', '점수가 초기화되었습니다.', 'success');
+                    })
+                    .catch((error) => {
+                        console.error('점수 초기화 실패:', error);
+                        showMessage('adminMessage', '점수 초기화 실패: ' + error.message, 'error');
+                    });
             }
         }
 
