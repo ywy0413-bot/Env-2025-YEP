@@ -1486,6 +1486,7 @@
                                 ? `<button class="btn" onclick="reopenSongVoting('${songId}')" style="margin-right: 5px; background: #17a2b8; color: white;">투표 재개</button>`
                                 : `<button class="btn" onclick="closeSongVoting('${songId}')" style="margin-right: 5px; background: #ffc107; color: #333;">투표 마감</button>`
                             }
+                            <button class="btn btn-primary" onclick="resetSongScore('${songId}')" style="margin-right: 5px;">점수 초기화</button>
                             <button class="btn btn-danger" onclick="deleteSong('${songId}')">삭제</button>
                         </div>
                     `;
@@ -1512,6 +1513,17 @@
                     // 해당 곡의 투표 결과도 삭제
                     resultsRef.child(songId).remove();
                     showMessage('adminMessage', '곡이 삭제되었습니다.', 'success');
+                });
+            }
+        }
+
+        // 곡 점수 초기화
+        function resetSongScore(songId) {
+            if (confirm('이 곡의 점수를 초기화하시겠습니까? (곡 정보는 유지됩니다)')) {
+                resultsRef.child(songId).remove().then(() => {
+                    showMessage('adminMessage', '점수가 초기화되었습니다.', 'success');
+                }).catch((error) => {
+                    showMessage('adminMessage', '점수 초기화 실패: ' + error.message, 'error');
                 });
             }
         }
