@@ -1762,10 +1762,22 @@
                         if (snapshot.exists() && snapshot.child(songId).exists()) {
                             const votes = snapshot.child(songId).child('votes').val();
                             if (votes) {
+                                console.log(`Processing votes for song: ${song.title}`, votes);
                                 Object.values(votes).forEach(vote => {
                                     allScores.push(vote.score);
                                     // 정답자 수집
-                                    if (vote.isCorrect) {
+                                    let isCorrect = vote.isCorrect;
+
+                                    // isCorrect 필드가 없는 경우 performerGuess로 판단
+                                    if (isCorrect === undefined && vote.performerGuess) {
+                                        isCorrect = vote.performerGuess.toLowerCase().trim() === song.performer.toLowerCase().trim();
+                                        console.log(`Checking performerGuess: "${vote.performerGuess}" vs "${song.performer}" = ${isCorrect}`);
+                                    }
+
+                                    // 아직도 undefined면 기존 데이터로 간주 - 모든 투표자를 정답자로 처리하지 않음
+                                    console.log(`Vote by ${vote.voter}: isCorrect=${isCorrect}, performerGuess=${vote.performerGuess}`);
+
+                                    if (isCorrect) {
                                         correctVoters.push(vote.voter);
                                     }
                                 });
