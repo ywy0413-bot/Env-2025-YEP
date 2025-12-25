@@ -1482,14 +1482,15 @@
                             <strong>${song.title}</strong> - ${song.artist}${statusBadge}<br>
                             <small>참가자: ${song.performer}</small>
                         </div>
-                        <div>
-                            <button class="btn btn-success" onclick="setCurrentSong('${songId}')" style="margin-right: 5px;">현재 곡으로</button>
+                        <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                            <button class="btn btn-success" onclick="setCurrentSong('${songId}')" style="margin-right: 0;">현재 곡으로</button>
                             ${isClosed
-                                ? `<button class="btn" onclick="reopenSongVoting('${songId}')" style="margin-right: 5px; background: #17a2b8; color: white;">투표 재개</button>`
-                                : `<button class="btn" onclick="closeSongVoting('${songId}')" style="margin-right: 5px; background: #ffc107; color: #333;">투표 마감</button>`
+                                ? `<button class="btn" onclick="reopenSongVoting('${songId}')" style="background: #17a2b8; color: white; margin-right: 0;">투표 재개</button>`
+                                : `<button class="btn" onclick="closeSongVoting('${songId}')" style="background: #ffc107; color: #333; margin-right: 0;">투표 마감</button>`
                             }
-                            <button class="btn btn-primary" onclick="resetSongScore('${songId}')" style="margin-right: 5px;">점수 초기화</button>
-                            <button class="btn btn-danger" onclick="deleteSong('${songId}')">삭제</button>
+                            <button class="btn" onclick="editSong('${songId}')" style="background: #28a745; color: white; margin-right: 0;">수정</button>
+                            <button class="btn btn-primary" onclick="resetSongScore('${songId}')" style="margin-right: 0;">점수 초기화</button>
+                            <button class="btn btn-danger" onclick="deleteSong('${songId}')" style="margin-right: 0;">삭제</button>
                         </div>
                     `;
                     songList.appendChild(songDiv);
@@ -1517,6 +1518,45 @@
                     showMessage('adminMessage', '곡이 삭제되었습니다.', 'success');
                 });
             }
+        }
+
+        // 곡 정보 수정
+        function editSong(songId) {
+            // 현재 곡 정보 가져오기
+            songsRef.child(songId).once('value', (snapshot) => {
+                const song = snapshot.val();
+                if (!song) {
+                    showMessage('adminMessage', '곡 정보를 찾을 수 없습니다.', 'error');
+                    return;
+                }
+
+                // 프롬프트로 새로운 정보 입력받기
+                const newTitle = prompt('곡명을 입력하세요:', song.title);
+                if (newTitle === null) return; // 취소
+
+                const newArtist = prompt('가수명을 입력하세요:', song.artist);
+                if (newArtist === null) return; // 취소
+
+                const newPerformer = prompt('참가자명을 입력하세요:', song.performer);
+                if (newPerformer === null) return; // 취소
+
+                // 입력값 검증
+                if (!newTitle.trim() || !newArtist.trim() || !newPerformer.trim()) {
+                    showMessage('adminMessage', '모든 정보를 입력해주세요.', 'error');
+                    return;
+                }
+
+                // Firebase 업데이트
+                songsRef.child(songId).update({
+                    title: newTitle.trim(),
+                    artist: newArtist.trim(),
+                    performer: newPerformer.trim()
+                }).then(() => {
+                    showMessage('adminMessage', '곡 정보가 수정되었습니다.', 'success');
+                }).catch((error) => {
+                    showMessage('adminMessage', '수정 실패: ' + error.message, 'error');
+                });
+            });
         }
 
         // 곡 점수 초기화
