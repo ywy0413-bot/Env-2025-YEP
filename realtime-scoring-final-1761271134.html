@@ -872,6 +872,7 @@
             <div class="live-results">
                 <h3 style="margin-bottom: 15px;">📊 실시간 결과</h3>
                 <div id="adminResults"></div>
+                <div id="adminParticipantRankings" style="margin-top: 30px;"></div>
             </div>
         </div>
 
@@ -935,6 +936,7 @@
             </div>
 
             <div id="displayResults"></div>
+            <div id="displayParticipantRankings" style="margin-top: 30px;"></div>
 
             <div class="control-buttons">
                 <button class="btn btn-primary" onclick="backToModeSelect()">모드 선택으로</button>
@@ -1820,6 +1822,26 @@
 
                     displayResults(results, 'adminResults');
                     displayResults(results, 'displayResults');
+
+                    // 참여자별 정답 개수 집계
+                    const participantStats = {};
+                    results.forEach(result => {
+                        result.correctVoters.forEach(voterName => {
+                            if (!participantStats[voterName]) {
+                                participantStats[voterName] = {
+                                    name: voterName,
+                                    correctCount: 0,
+                                    correctSongs: []
+                                };
+                            }
+                            participantStats[voterName].correctCount++;
+                            participantStats[voterName].correctSongs.push(`${result.title} - ${result.artist}`);
+                        });
+                    });
+
+                    // 참여자 순위 표시
+                    displayParticipantRankings(participantStats, 'adminParticipantRankings');
+                    displayParticipantRankings(participantStats, 'displayParticipantRankings');
                 });
             });
         }
@@ -1890,6 +1912,51 @@
                     `}
                 </div>
             `).join('');
+        }
+
+        // 참여자별 정답 개수 순위 표시
+        function displayParticipantRankings(participantStats, elementId) {
+            const container = document.getElementById(elementId);
+            if (!container) return;
+
+            // 배열로 변환하고 정답 개수로 정렬
+            const rankings = Object.values(participantStats).sort((a, b) => b.correctCount - a.correctCount);
+
+            if (rankings.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">아직 정답자가 없습니다.</p>';
+                return;
+            }
+
+            const getRankEmoji = (index) => {
+                if (index === 0) return '🥇';
+                if (index === 1) return '🥈';
+                if (index === 2) return '🥉';
+                return '🏅';
+            };
+
+            container.innerHTML = `
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                    <h3 style="color: white; margin-bottom: 15px; text-align: center;">🏆 참여자 정답 순위</h3>
+                    ${rankings.map((participant, index) => `
+                        <div style="background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; ${index < 3 ? 'border-left: 5px solid #ffd700;' : ''}">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <div style="font-size: 1.2em; font-weight: bold;">
+                                    ${getRankEmoji(index)} ${index + 1}위: ${participant.name}
+                                </div>
+                                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold;">
+                                    ${participant.correctCount}개 정답
+                                </div>
+                            </div>
+                            <details style="cursor: pointer;">
+                                <summary style="color: #667eea; font-weight: bold; padding: 5px 0;">맞춘 곡 보기</summary>
+                                <ul style="margin: 10px 0; padding-left: 20px; color: #666;">
+                                    ${participant.correctSongs.map(song => `<li style="margin: 5px 0;">${song}</li>`).join('')}
+                                </ul>
+                            </details>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
         }
 
         // 음향 효과 생성 함수들
