@@ -1802,20 +1802,24 @@
                         if (snapshot.exists() && snapshot.child(songId).exists()) {
                             const votes = snapshot.child(songId).child('votes').val();
                             if (votes) {
-                                console.log(`Processing votes for song: ${song.title}`, votes);
+                                console.log(`Processing votes for song: ${song.title} (performer: ${song.performer})`, votes);
                                 Object.values(votes).forEach(vote => {
                                     allScores.push(vote.score);
-                                    // 정답자 수집
-                                    let isCorrect = vote.isCorrect;
 
-                                    // isCorrect 필드가 없는 경우 performerGuess로 판단
-                                    if (isCorrect === undefined && vote.performerGuess) {
+                                    // 정답자 수집 - 항상 현재 곡 정보를 기준으로 재평가
+                                    let isCorrect = false;
+
+                                    if (vote.performerGuess) {
+                                        // performerGuess가 있으면 현재 곡의 performer와 비교하여 재평가
                                         isCorrect = vote.performerGuess.toLowerCase().trim() === song.performer.toLowerCase().trim();
-                                        console.log(`Checking performerGuess: "${vote.performerGuess}" vs "${song.performer}" = ${isCorrect}`);
+                                        console.log(`[재평가] "${vote.performerGuess}" vs "${song.performer}" = ${isCorrect}`);
+                                    } else if (vote.isCorrect !== undefined) {
+                                        // performerGuess가 없고 isCorrect만 있으면 그대로 사용 (이전 버전 호환성)
+                                        isCorrect = vote.isCorrect;
+                                        console.log(`[기존값] isCorrect = ${isCorrect}`);
                                     }
 
-                                    // 아직도 undefined면 기존 데이터로 간주 - 모든 투표자를 정답자로 처리하지 않음
-                                    console.log(`Vote by ${vote.voter}: isCorrect=${isCorrect}, performerGuess=${vote.performerGuess}`);
+                                    console.log(`Vote by ${vote.voter}: isCorrect=${isCorrect}`);
 
                                     if (isCorrect) {
                                         correctVoters.push(vote.voter);
